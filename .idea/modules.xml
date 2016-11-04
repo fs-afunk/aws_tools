@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/aws_snap.iml" filepath="$PROJECT_DIR$/.idea/aws_snap.iml" />
+      <module fileurl="file://$USER_HOME$/PycharmProjects/aws_tools/.idea/aws_tools.iml" filepath="$USER_HOME$/PycharmProjects/aws_tools/.idea/aws_tools.iml" />
     </modules>
   </component>
 </project>
