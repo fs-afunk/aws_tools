@@ -8,27 +8,31 @@ import os
 import subprocess
 import glob
 
-# Clear all of the log files/temporary files we don't need to capture in the AMI
+###
+# Variables that you may want to change
+###
+
+instance_size = 'm4.2xlarge'  # No error checking!  Don't typo!
+root_drive_size = 25  # In gigglebytes
+root_drive_type = 'gp2'
+security_groups = ['sg-de09a2b7', 'sg-e851fa81']
+autoscale_group_name = 'mypillow'
 
 clear_dirs = [
     '/var/log',
-    '/var/cache',
-    '/var/www/vhosts/go.puma.com/logs',
-    '/var/www/vhosts/deploy.go.puma.com/logs',
-    '/var/www/vhosts/dev.go.puma.com/logs',
-    '/var/www/vhosts/local.go.puma.com/logs',
-    '/var/www/vhosts/staging.go.puma.com/logs'
+    '/var/cache'
 ]
 
 clear_globs = [
-    '/var/www/vhosts/go.puma.com/.pm2/pm2.log*',
-    '/var/www/vhosts/deploy.go.puma.com/.pm2/pm2.log*',
-    '/var/www/vhosts/dev.go.puma.com/.pm2/pm2.log*',
-    '/var/www/vhosts/local.go.puma.com/.pm2/pm2.log*',
-    '/var/www/vhosts/staging.go.puma.com/.pm2/pm2.log*'
+
 ]
 
-clear_files = []
+clear_files = [
+
+]
+
+# Clear all of the log files/temporary files we don't need to capture in the AMI
+
 
 for pattern in clear_globs:
     clear_files.extend(glob.glob(pattern))
@@ -53,15 +57,15 @@ time_string = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 ami_response = ec2_client.create_image(
     DryRun=False,
     InstanceId=my_id,
-    Name='go.puma.com@{0}'.format(time_string),
-    Description='A go.puma.com worker node, taken at {0}.'.format(time_string),
+    Name='mypillow.com@{0}'.format(time_string),
+    Description='A mypillow.com worker node, taken at {0}.'.format(time_string),
     NoReboot=True,
     BlockDeviceMappings=[
         {
             'DeviceName': '/dev/sda1',
             'Ebs': {
-                'VolumeSize': 40,
-                'VolumeType': 'gp2',
+                'VolumeSize': root_drive_size,
+                'VolumeType': root_drive_type,
                 'DeleteOnTermination': True,
             },
         },
@@ -76,19 +80,20 @@ print('Created AMI {0}'.format(ami_response['ImageId']))
 
 as_client = boto3.client('autoscaling')
 
-lg_name = 'go.puma.com lc {0}'.format(time_string)
+lg_name = 'mypillow-worker-{0}'.format(time_string)
 
 print('Creating Launch Group {0}...'.format(lg_name))
 
 lg_response = as_client.create_launch_configuration(
     LaunchConfigurationName=lg_name,
     ImageId=ami_response['ImageId'],
-    InstanceType='c4.large',
-    SecurityGroups=['sg-01651266'],
-    InstanceMonitoring={'Enabled': True}
+    InstanceType=instance_size,
+    SecurityGroups=security_groups,
+    InstanceMonitoring={'Enabled': True},
+    IamInstanceProfile='arn:aws:iam::148312753654:instance-profile/CodeDeploySampleStack-qiu3bm54gvh2v1ymygb9-InstanceRoleInstanceProfile-SYV9F6UEYJY0'
 )
 
-# Boto3 didn't provide a watier for this, so I'll have to make one
+# Boto3 didn't provide a waiter for this, so I'll have to make one
 
 timeout = time.time() + 30
 while True:
@@ -102,6 +107,6 @@ while True:
 print('Launch group created.  Modifying AutoScale Group...')
 
 asg_response = as_client.update_auto_scaling_group(
-    AutoScalingGroupName='go.puma.com',
+    AutoScalingGroupName=autoscale_group_name,
     LaunchConfigurationName=lg_name
 )

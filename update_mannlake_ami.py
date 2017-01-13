@@ -13,19 +13,16 @@ import glob
 clear_dirs = [
     '/var/log',
     '/var/cache',
-    '/var/www/vhosts/go.puma.com/logs',
-    '/var/www/vhosts/deploy.go.puma.com/logs',
-    '/var/www/vhosts/dev.go.puma.com/logs',
-    '/var/www/vhosts/local.go.puma.com/logs',
-    '/var/www/vhosts/staging.go.puma.com/logs'
+    '/var/www/vhosts/mannlakeltd.com/logs',
+    '/var/www/vhosts/mannlakeltd.com/httpdocs/var/report',
+    '/var/www/vhosts/mannlakeltd.com/httpdocs/var/log',
+    '/var/www/vhosts/mannlakeltd.com/httpdocs/var/cache',
+    '/var/www/vhosts/mannlakeltd.com/httpdocs/var/session'
+
 ]
 
 clear_globs = [
-    '/var/www/vhosts/go.puma.com/.pm2/pm2.log*',
-    '/var/www/vhosts/deploy.go.puma.com/.pm2/pm2.log*',
-    '/var/www/vhosts/dev.go.puma.com/.pm2/pm2.log*',
-    '/var/www/vhosts/local.go.puma.com/.pm2/pm2.log*',
-    '/var/www/vhosts/staging.go.puma.com/.pm2/pm2.log*'
+
 ]
 
 clear_files = []
@@ -53,14 +50,14 @@ time_string = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 ami_response = ec2_client.create_image(
     DryRun=False,
     InstanceId=my_id,
-    Name='go.puma.com@{0}'.format(time_string),
-    Description='A go.puma.com worker node, taken at {0}.'.format(time_string),
+    Name='mannlakeltd.com@{0}'.format(time_string),
+    Description='A mannlakeltd.com worker node, taken at {0}.'.format(time_string),
     NoReboot=True,
     BlockDeviceMappings=[
         {
             'DeviceName': '/dev/sda1',
             'Ebs': {
-                'VolumeSize': 40,
+                'VolumeSize': 20,
                 'VolumeType': 'gp2',
                 'DeleteOnTermination': True,
             },
@@ -76,14 +73,14 @@ print('Created AMI {0}'.format(ami_response['ImageId']))
 
 as_client = boto3.client('autoscaling')
 
-lg_name = 'go.puma.com lc {0}'.format(time_string)
+lg_name = 'mannlakeltd.com lc {0}'.format(time_string)
 
 print('Creating Launch Group {0}...'.format(lg_name))
 
 lg_response = as_client.create_launch_configuration(
     LaunchConfigurationName=lg_name,
     ImageId=ami_response['ImageId'],
-    InstanceType='c4.large',
+    InstanceType='c4.xlarge',
     SecurityGroups=['sg-01651266'],
     InstanceMonitoring={'Enabled': True}
 )
@@ -102,6 +99,6 @@ while True:
 print('Launch group created.  Modifying AutoScale Group...')
 
 asg_response = as_client.update_auto_scaling_group(
-    AutoScalingGroupName='go.puma.com',
+    AutoScalingGroupName='mannlakeltd.com',
     LaunchConfigurationName=lg_name
 )
